@@ -5,14 +5,15 @@ Created on Mar 11, 2017
 '''
 import serial
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-
+from collections import deque
 
 #Initialize variables
 xVal = []
 yVal = []
 zVal = []
-t = []
+#t = []
+d = deque([],maxlen=5000)
+t = deque([],maxlen=5000)
 
 #Setup Serial here
 ser = serial.Serial('COM8',38400)
@@ -25,28 +26,35 @@ for x in range(0,3):
 #Setup plot
 fig, ax = plt.subplots()
 plt.title('Real-time Acceleration')
-ln, =ax.plot([],[],'r-',animated = True)
 plt.ion()
+ln, = ax.plot(t,zVal,'r-')
+plt.show()
 
 print("Entering drawing")
 
-def update(frame):
+def update(temp):
    
-    temp = ser.readline() #Read input
     temp = temp.split("\t") #split up tabs
     xVal.append(int(temp[1]))
     yVal.append(int(temp[2]))
     zVal.append(int(temp[3]))
-    t.append(len(zVal)) #Add to "time" or x-axis
+    #t.append(len(zVal)) #Add to "time" or x-axis
+    
+    d.append(int(temp[3]))
+    t.append(range(0,len(zVal)))
     
     ln.set_data(t,zVal)
-    
-    #Allow axes to resize automatically
-    ax.relim()
-    ax.autoscale_view()
-    
+    print ln.get_xdata()
     return ln
 
-
-ani = animation.FuncAnimation(fig,update, interval = 20)
-plt.show()
+while True:
+    while ser.in_waiting == 0: #wait for incoming data
+        pass
+    datIn = update(ser.readline())
+    
+    fig.canvas.draw()
+    ax.relim()
+    ax.autoscale_view()
+    #plt.show(block=False)
+    
+ser.close()
